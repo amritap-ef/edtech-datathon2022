@@ -1,4 +1,4 @@
-# Datathon 2022 - Edtech After Class Rerport
+# Datathon 2022 - Edtech After Class Report
 
 <hr> 
 
@@ -14,7 +14,6 @@ Project members:
 - Kamel Nebhi
 - Amrita Panesar
 - Kash Ramli
-
 
 
 ## Installation
