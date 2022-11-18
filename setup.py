@@ -11,11 +11,14 @@ setup(
     description="Datathon ACR libraries",
 
     install_requires=[
-        "streamlit",
-        # "transformers[sentencepiece]",
+        "streamlit==1.14.1",
+        "streamlit-player==0.1.5"
+        "transformers==4.24.0",
+        "nltk==3.7"
         # "sentencepiece",
-        "huggingface_hub",
-        "elasticsearch==7.10"
+        "huggingface_hub==0.10.1",
+        "elasticsearch==7.10",
+        "pandas==1.5.1"
     ],
     extras_require={
     },
