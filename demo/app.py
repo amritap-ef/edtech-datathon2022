@@ -1,8 +1,10 @@
 import streamlit as st
+from streamlit_option_menu import option_menu
+import re
 # from content_recomm.paraphrase import load_paraphrase_model, get_paraphrases
-from feedback_generator.keyword_text_gen_inference import generate_feedback_comments
+from feedback_generator.keyword_text_gen_inference import get_generated_feedback, _get_openai_key
 from content_recomm.es_recomm_content import _get_elasticsearch_url, index_exact_search_relevance_metadata, index_exact_search_relevance_captions
-from content_recomm.question_answering import get_question_answers
+from content_recomm.question_answering import get_comprehension_question
 from streamlit_player import st_player
 from demo.helpers import load_obs_topics_data, get_url_caption_youtube
 
@@ -12,15 +14,20 @@ st.header("After Class Report Generator")
 
 if "elasticsearch_url" not in st.session_state:
     st.session_state.elasticsearch_url = _get_elasticsearch_url()
+if "openai_key" not in st.session_state:
+    st.session_state.openai_key = _get_openai_key()
 
 obs_topics_data = load_obs_topics_data("data/obs_topics_id_processed.csv")
 if "unit_titles" not in st.session_state:
     st.session_state.unit_titles = obs_topics_data["unit_title"]
 # if "paraphrase_model" not in st.session_state:
 #     st.session_state.paraphrase_model = load_paraphrase_model()
+with st.sidebar:
+    selected = option_menu("EF / Datathon", ["Generate Feedback"],
+                                   icons=['search', 'patch-question'], menu_icon="grid", default_index=0)
 
 student_name = st.sidebar.text_input("Student Name")
-student_grade = st.sidebar.number_input("Student Grade", min_value=0, max_value=100)
+student_grade = st.sidebar.number_input("Student Grade", min_value=0, max_value=100, value=60)
 
 
 lesson_date = st.sidebar.date_input("Lesson Date")
@@ -34,8 +41,18 @@ lesson_unit = st.sidebar.selectbox("Select unit", st.session_state.unit_titles)
 
 st.sidebar.subheader("\nFeedback Generator")
 feedback_topic = st.sidebar.text_input("Topic for feedback")
-feedback_keywords = st.sidebar.text_area("Enter keywords, each separated by a line", height=120)
-feedback_sentiment = st.sidebar.selectbox("Enter sentiment", options=["Positive", "Negative"])
+# list of kw extracted from ACR samples
+list_kw = ['improvement', 'solutions', 'movie', 'flight', 'transportation', 'food', 'confidence', 'subtitles', 'weekend', 'conversationalist', 'help', 'program', 'availability', 'sentences', 'past', 'buying', 'opinions', 'skills', 'way', 'speaking', 'office', 'pronunciation', 'cause', 'phrases', 'days', 'evening', 'birthday', 'decisions', 'experience', 'tense', 'today', 'celebrations', 'restaurant', 'workplace stress', 'vacation plans', 'tools', 'day', 'school', 'shop', 'languages', 'regards', 'delight', 'meeting', 'standard', 'afternoon', 'lot', 'progress', 'tips', 'contact', 'instruction', 'numbers', 'study', 'vacation', 'prediction', 'basic mistakes', 'tomorrow', 'redacted_email', 'comparative forms', 'friend', 'topics', 'concentration', 'ease', 'week', 'nose', 'films', 'support', 'mistakes', 'meet', 'causes', 'articles', 'construction', 'care', 'development', 'stress', 'boss', 'outfits', 'years', 'grammar', 'plan', 'clips', 'stories', 'task', 'practice', 'plans', 'future technology', 'service', 'technology', 'directions', 'intelligence', 'conversations', 'art', 'good luck', 'studies', 'word', 'joy', 'laptop', 'effort', 'packages', 'language', 'choice', 'lessons', 'socializing', 'student', 'recommending activities', 'listening', 'phone numbers', 'sentence construction', 'work', 'examples', 'events', 'time', 'people', 'willingness', 'lesson', 'provider', 'behalf', 'problems', 'building', 'nice', 'life', 'infinitive', 'companies', 'rest', 'great lesson', 'great job', 'clarity', 'pleasure', 'verb', 'hotels', 'classes', 'future', 'transport', 'job', 'great effort', 'tonight', 'activities', 'cell', 'responses', 'sentence', 'topic', 'innovations', 'word choice', 'introductions', 'challenges', 'words', 'different subjects', 'meetings', 'subjects', 'proceeding', 'expressions', 'employee', 'course', 'depression', 'question', 'issues', 'notes', 'monitoring', 'email', 'modal', 'learning', 'opinion', 'effect', 'symp', 'pressure', 'interview questions', 'holiday', 'good responses', 'diligent care', 'suggestions', 'great sentences', 'prepositions', 'difficulties', 'study material', 'structure', 'cities', 'website', 'complete sentences', 'engineer', 'sales', 'classroom', 'doctor', 'views', 'hobbies', 'technical problems', 'event', 'options', 'mail', 'relationships', 'advice', 'instructions', 'participation', 'phone packages', 'qualifications', 'tenses', 'conversing', 'attention', 'symptoms', 'role', 'proposals', 'address', 'class', 'store', 'materials', 'interests', 'purchase', 'grades', 'fun', 'luck', 'conversation', 'countries', 'reasons', 'improvements', 'upcoming events', 'town', 'movies', 'control', 'collocations', 'nice meeting', 'work experience', 'use', 'education', 'information', 'pronunciations', 'item', 'clerk', 'times', 'night', 'target', 'business', 'interview', 'forms', 'phone', 'correction', 'new words', 'problem', 'rapport', 'different countries', 'reservation', 'bit', 'journey', 'asap', 'teacher', 'vocabulary', 'networking', 'questions']
+
+feedback_keywords = st.sidebar.multiselect(
+            'Choose the keywords describing the lesson:',
+            list_kw,
+            ["lesson", "address", "job", "conversation", "time", "class", "movie", "vocabulary"])
+
+feedback_sentiment = st.sidebar.selectbox('Overall sentiment:', ('Positive', 'Neutral', 'Negative'))
+generator_model = "curie:ft-personal-2022-11-18-09-56-53"
+topic_lesson = st.sidebar.selectbox('Select topic lesson:', ('Sport', 'TV'))
+generator_model_temperature = st.sidebar.number_input("Creativity", min_value=0, max_value=100, value=0)
 
 st.sidebar.subheader("\nHomework Generator")
 
@@ -57,6 +74,7 @@ if True:
     st.text(f"Lesson Unit: {lesson_unit}")
     st.text(f"Lesson Topic: {lesson_topic}")
     st.text(f"Lesson Objective: {lesson_objective}")
+    st.text(f"Grade: {student_grade}")
     st.markdown("""---""")
 
     st.subheader(f"**Vocabulary of Focus**")
@@ -69,10 +87,22 @@ if True:
 
     if student_name != "" and student_grade is not None and feedback_topic != "" and feedback_keywords != "" and feedback_sentiment != "":
         # st.markdown("""---""")
-        # st.subheader("Lesson Feedback")
-        feedback_keywords = feedback_keywords.split("\n")
-        feedback = generate_feedback_comments(student_name, student_grade, feedback_topic, feedback_keywords, feedback_sentiment)
-        st.markdown(feedback)
+        # construct prompt for open api query
+        prompt = "Name is " + student_name + ". " + "Grade is " + str(
+            student_grade) + ". " + "Topic is" + topic_lesson + ". " + "Sentiment is " + feedback_sentiment + ". " + "Keywords are " + ", ".join(
+            feedback_keywords) + "."
+        # request openapi
+        result = get_generated_feedback(st.session_state.openai_key, prompt, model=generator_model, temperature=generator_model_temperature)
+        # write results
+        # st.json(result)
+        # some noise appears in the output text
+        generated_text = result["choices"][0]["text"]
+        generated_text = re.sub('END', '', generated_text)
+        generated_text = generated_text.split(".")
+        if student_name in generated_text[-1]:
+            generated_text = generated_text[:-1]
+        generated_text = ".".join(generated_text)
+        st.write(generated_text)
 
     st.markdown("""---""")
 
@@ -147,6 +177,8 @@ if True:
             url = metadata["url"]
             cefr = res["_source"]["cefr"]["pred"]
             content_type = metadata["type"]
+
+
             if "topic_classification" in res["_source"]:
                 topics = [t["topic"] for t in res["_source"]["topic_classification"]]
             else:
@@ -175,11 +207,16 @@ if True:
 
                 st.markdown(url)
 
+                if content_type == "news": # comprehension questions
+                    article_body_html = metadata["article_body_html"]
+                    question, answer = get_comprehension_question(article_body_html, phrase_struggled)
+                    if question is not None and answer is not None:
+                        st.markdown(f"**Question: {question}**")
+                        with st.expander("See answer"):
+                            st.write(answer)
+
             st.markdown("\n")
 
-            if content_type == "news":
-                article_body_html = metadata["article_body_html"]
-                get_question_answers(article_body_html)
 
             # st.markdown("""---""")
 

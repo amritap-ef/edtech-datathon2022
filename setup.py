@@ -18,7 +18,10 @@ setup(
         # "sentencepiece",
         "huggingface_hub==0.10.1",
         "elasticsearch==7.10",
-        "pandas==1.5.1"
+        "pandas==1.5.1",
+        "beautifulsoup4==4.11.1",
+        "streamlit-option-menu==0.3.2",
+        "openai==0.25.0"
     ],
     extras_require={
     },
