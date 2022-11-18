@@ -4,7 +4,7 @@ import re
 # from content_recomm.paraphrase import load_paraphrase_model, get_paraphrases
 from feedback_generator.keyword_text_gen_inference import get_generated_feedback, _get_openai_key
 from content_recomm.es_recomm_content import _get_elasticsearch_url, index_exact_search_relevance_metadata, index_exact_search_relevance_captions
-from content_recomm.question_answering import get_comprehension_question
+from content_recomm.question_answer_gen import get_comprehension_question
 from streamlit_player import st_player
 from demo.helpers import load_obs_topics_data, get_url_caption_youtube
 
