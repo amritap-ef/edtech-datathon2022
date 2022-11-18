@@ -2,7 +2,7 @@ import streamlit as st
 from streamlit_option_menu import option_menu
 import re
 # from content_recomm.paraphrase import load_paraphrase_model, get_paraphrases
-from feedback_generator.keyword_text_gen_inference import get_generated_feedback, _get_openai_key
+from feedback_generator.keyword_text_gen_inference import get_generated_feedback, _get_openai_key, list_kw
 from content_recomm.es_recomm_content import _get_elasticsearch_url, index_exact_search_relevance_metadata, index_exact_search_relevance_captions
 from content_recomm.question_answer_gen import get_comprehension_question
 from streamlit_player import st_player
@@ -46,10 +46,8 @@ if generator_model == "Curie":
 elif generator_model == "Davinci":
     generator_model = "davinci:ft-personal-2022-11-18-10-35-19"
 
-feedback_topic = st.sidebar.text_input("Topic for feedback")
 
 # list of kw extracted from ACR samples
-list_kw = ['improvement', 'solutions', 'movie', 'flight', 'transportation', 'food', 'confidence', 'subtitles', 'weekend', 'conversationalist', 'help', 'program', 'availability', 'sentences', 'past', 'buying', 'opinions', 'skills', 'way', 'speaking', 'office', 'pronunciation', 'cause', 'phrases', 'days', 'evening', 'birthday', 'decisions', 'experience', 'tense', 'today', 'celebrations', 'restaurant', 'workplace stress', 'vacation plans', 'tools', 'day', 'school', 'shop', 'languages', 'regards', 'delight', 'meeting', 'standard', 'afternoon', 'lot', 'progress', 'tips', 'contact', 'instruction', 'numbers', 'study', 'vacation', 'prediction', 'basic mistakes', 'tomorrow', 'redacted_email', 'comparative forms', 'friend', 'topics', 'concentration', 'ease', 'week', 'nose', 'films', 'support', 'mistakes', 'meet', 'causes', 'articles', 'construction', 'care', 'development', 'stress', 'boss', 'outfits', 'years', 'grammar', 'plan', 'clips', 'stories', 'task', 'practice', 'plans', 'future technology', 'service', 'technology', 'directions', 'intelligence', 'conversations', 'art', 'good luck', 'studies', 'word', 'joy', 'laptop', 'effort', 'packages', 'language', 'choice', 'lessons', 'socializing', 'student', 'recommending activities', 'listening', 'phone numbers', 'sentence construction', 'work', 'examples', 'events', 'time', 'people', 'willingness', 'lesson', 'provider', 'behalf', 'problems', 'building', 'nice', 'life', 'infinitive', 'companies', 'rest', 'great lesson', 'great job', 'clarity', 'pleasure', 'verb', 'hotels', 'classes', 'future', 'transport', 'job', 'great effort', 'tonight', 'activities', 'cell', 'responses', 'sentence', 'topic', 'innovations', 'word choice', 'introductions', 'challenges', 'words', 'different subjects', 'meetings', 'subjects', 'proceeding', 'expressions', 'employee', 'course', 'depression', 'question', 'issues', 'notes', 'monitoring', 'email', 'modal', 'learning', 'opinion', 'effect', 'symp', 'pressure', 'interview questions', 'holiday', 'good responses', 'diligent care', 'suggestions', 'great sentences', 'prepositions', 'difficulties', 'study material', 'structure', 'cities', 'website', 'complete sentences', 'engineer', 'sales', 'classroom', 'doctor', 'views', 'hobbies', 'technical problems', 'event', 'options', 'mail', 'relationships', 'advice', 'instructions', 'participation', 'phone packages', 'qualifications', 'tenses', 'conversing', 'attention', 'symptoms', 'role', 'proposals', 'address', 'class', 'store', 'materials', 'interests', 'purchase', 'grades', 'fun', 'luck', 'conversation', 'countries', 'reasons', 'improvements', 'upcoming events', 'town', 'movies', 'control', 'collocations', 'nice meeting', 'work experience', 'use', 'education', 'information', 'pronunciations', 'item', 'clerk', 'times', 'night', 'target', 'business', 'interview', 'forms', 'phone', 'correction', 'new words', 'problem', 'rapport', 'different countries', 'reservation', 'bit', 'journey', 'asap', 'teacher', 'vocabulary', 'networking', 'questions']
 
 feedback_keywords = st.sidebar.multiselect(
             'Choose the keywords describing the lesson:',
@@ -57,7 +55,6 @@ feedback_keywords = st.sidebar.multiselect(
             ["lesson", "address", "job", "conversation", "time", "class", "movie", "vocabulary"])
 
 feedback_sentiment = st.sidebar.selectbox('Overall sentiment:', ('Positive', 'Neutral', 'Negative'))
-generator_model = "curie:ft-personal-2022-11-18-09-56-53"
 topic_lesson = st.sidebar.selectbox('Select topic lesson:', ('Sport', 'TV'))
 generator_model_temperature = st.sidebar.number_input("Creativity", min_value=0, max_value=100, value=0)
 
@@ -85,14 +82,14 @@ if True:
     st.markdown("""---""")
 
     st.subheader(f"**Vocabulary of Focus**")
-    st.info(lesson_vocab)
+    st.markdown(lesson_vocab)
 
     st.text(" \n")
 
     st.markdown("""---""")
     st.subheader("Lesson Feedback")
 
-    if student_name != "" and student_grade is not None and feedback_topic != "" and feedback_keywords != "" and feedback_sentiment != "":
+    if student_name != "" and student_grade is not None and topic_lesson != "" and feedback_keywords != "" and feedback_sentiment != "":
         # st.markdown("""---""")
         # construct prompt for open api query
         prompt = "Name is " + student_name + ". " + "Grade is " + str(
