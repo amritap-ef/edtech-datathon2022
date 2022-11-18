@@ -1,5 +1,6 @@
 import streamlit as st
 # from content_recomm.paraphrase import load_paraphrase_model, get_paraphrases
+from feedback_generator.keyword_text_gen_inference import generate_feedback_comments
 from content_recomm.es_recomm_content import _get_elasticsearch_url, index_exact_search_relevance_metadata, index_exact_search_relevance_captions
 from content_recomm.question_answering import get_question_answers
 from streamlit_player import st_player
@@ -19,6 +20,8 @@ if "unit_titles" not in st.session_state:
 #     st.session_state.paraphrase_model = load_paraphrase_model()
 
 student_name = st.sidebar.text_input("Student Name")
+student_grade = st.sidebar.number_input("Student Grade", min_value=0, max_value=100)
+
 
 lesson_date = st.sidebar.date_input("Lesson Date")
 
@@ -30,7 +33,9 @@ lesson_unit = st.sidebar.selectbox("Select unit", st.session_state.unit_titles)
 # lesson_topics = st.sidebar.multiselect("Select topics", ["Greeting", "Ordering Food"])
 
 st.sidebar.subheader("\nFeedback Generator")
-
+feedback_topic = st.sidebar.text_input("Topic for feedback")
+feedback_keywords = st.sidebar.text_area("Enter keywords, each separated by a line", height=120)
+feedback_sentiment = st.sidebar.selectbox("Enter sentiment", options=["Positive", "Negative"])
 
 st.sidebar.subheader("\nHomework Generator")
 
@@ -58,11 +63,17 @@ if True:
     st.info(lesson_vocab)
 
     st.text(" \n")
-    st.markdown("""---""")
 
+    st.markdown("""---""")
     st.subheader("Lesson Feedback")
-    feedback = "lorem et ipsum sfsdfs dfsdf sdf sdf sdf sdf sdf sdf "
-    st.markdown(feedback)
+
+    if student_name != "" and student_grade is not None and feedback_topic != "" and feedback_keywords != "" and feedback_sentiment != "":
+        # st.markdown("""---""")
+        # st.subheader("Lesson Feedback")
+        feedback_keywords = feedback_keywords.split("\n")
+        feedback = generate_feedback_comments(student_name, student_grade, feedback_topic, feedback_keywords, feedback_sentiment)
+        st.markdown(feedback)
+
     st.markdown("""---""")
 
     st.text(" \n")
@@ -99,16 +110,11 @@ if True:
 
         col1, col2 = st.columns(2)
 
-
-
         if len(inner_hits) != 0:
             # display one of each video
             inner_hit = inner_hits[0]
             highlight = inner_hit["highlight"]["captions.text"]
             start_caption_time = inner_hit["_source"]["start"]
-
-            # col1, col2 = st.columns(2)
-            # st.markdown("""---""")
 
             with col2:
                 st.header(headline)
