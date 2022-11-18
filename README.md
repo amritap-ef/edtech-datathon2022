@@ -21,7 +21,8 @@ Project members:
 1. Install requirements:
 ```
 pip install -e .
-pip install git+https://github.com/PrithivirajDamodaran/Parrot_Paraphraser.git
+# pip install git+https://github.com/PrithivirajDamodaran/Parrot_Paraphraser.git
+#git clone https://github.com/patil-suraj/question_generation.git
 ```
 
 2. Create a hugging face account and sign in to get your access token. Use this to log into huggingface: 
